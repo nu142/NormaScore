@@ -1,0 +1,13 @@
+{
+    "1nf": [
+        {
+            "name": "RESTAURANT_ORDER",
+            "attributes": [
+                "order_id"
+            ],
+            "pk": [
+                "order_id"
+            ]
+        }
+    ]
+}

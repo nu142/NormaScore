@@ -1,0 +1,157 @@
+{
+    "fds": [
+        "customer_id->customer_name,customer_phone",
+        "restaurant_id->restaurant_name,restaurant_location,restaurant_rating",
+        "item_id->item_name,item_category,item_base_price,chef_id",
+        "chef_id->chef_name,chef_specialty",
+        "order_id->order_date,order_time,total_price,customer_id,restaurant_id"
+    ],
+    "1nf": [
+        {
+            "name": "RESTAURANT_ORDER",
+            "attributes": [
+                "order_id",
+                "order_date",
+                "order_time",
+                "total_price",
+                "customer_id",
+                "customer_name",
+                "customer_phone",
+                "customer_address",
+                "restaurant_id",
+                "restaurant_name",
+                "restaurant_location",
+                "restaurant_rating",
+                "item_id",
+                "item_name",
+                "item_category",
+                "item_base_price",
+                "chef_id",
+                "chef_name",
+                "chef_specialty",
+                "quantity",
+                "discount_applied",
+                "item_total"
+            ],
+            "pk": [
+                "order_id"
+            ]
+        }
+    ],
+    "2nf": [
+        {
+            "name": "CUSTOMER_INFO",
+            "attributes": [
+                "customer_id",
+                "customer_name",
+                "customer_phone",
+                "customer_address"
+            ],
+            "pk": [
+                "customer_id"
+            ]
+        },
+        {
+            "name": "RESTAURANT_INFO",
+            "attributes": [
+                "restaurant_id",
+                "restaurant_name",
+                "restaurant_location",
+                "restaurant_rating"
+            ],
+            "pk": [
+                "restaurant_id"
+            ]
+        },
+        {
+            "name": "ITEM_INFO",
+            "attributes": [
+                "item_id",
+                "item_name",
+                "item_category",
+                "item_base_price",
+                "chef_id"
+            ],
+            "pk": [
+                "item_id"
+            ]
+        },
+        {
+            "name": "CHEF_INFO",
+            "attributes": [
+                "chef_id",
+                "chef_name",
+                "chef_specialty"
+            ],
+            "pk": [
+                "chef_id"
+            ]
+        },
+        {
+            "name": "ORDER_INFO",
+            "attributes": [
+                "order_id",
+                "order_date",
+                "order_time",
+                "total_price",
+                "customer_id",
+                "restaurant_id"
+            ],
+            "pk": [
+                "order_id"
+            ]
+        }
+    ],
+    "3nf": [
+        {
+            "name": "CUSTOMER_INFO",
+            "attributes": [
+                "customer_id",
+                "customer_name",
+                "customer_phone",
+                "customer_address"
+            ],
+            "pk": [
+                "customer_id"
+            ]
+        },
+        {
+            "name": "RESTAURANT_INFO",
+            "attributes": [
+                "restaurant_id",
+                "restaurant_name",
+                "restaurant_location",
+                "restaurant_rating"
+            ],
+            "pk": [
+                "restaurant_id"
+            ]
+        }
+    ],
+    "final_tables": [
+        {
+            "name": "CUSTOMER_INFO",
+            "attributes": [
+                "customer_id",
+                "customer_name",
+                "customer_phone",
+                "customer_address"
+            ],
+            "pk": [
+                "customer_id"
+            ]
+        },
+        {
+            "name": "RESTAURANT_INFO",
+            "attributes": [
+                "restaurant_id",
+                "restaurant_name",
+                "restaurant_location",
+                "restaurant_rating"
+            ],
+            "pk": [
+                "restaurant_id"
+            ]
+        }
+    ]
+}

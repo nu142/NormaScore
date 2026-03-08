@@ -1,0 +1,20 @@
+# Environments
+env/
+venv/
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Streamlit
+.streamlit/
+*streamlit*
+
+# System
+.DS_Store
+
+# Temporary files / test data not meant for version control (optional, but good practice)
+# test_data/
