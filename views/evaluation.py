@@ -43,10 +43,11 @@ st.markdown("### 📝 Individual Student Submissions")
 
 # Format dataframe for display
 display_df = df.copy()
+display_df['Score (Raw)'] = display_df.apply(lambda row: f"{row['RawScore']:.1f} / {row['MaxScore']:.1f}", axis=1)
 display_df['Score'] = display_df['Score'].apply(lambda x: float(f"{x:.1f}"))
 
 st.dataframe(
-    display_df[['Student Name', 'Score', 'Feedback']],
+    display_df[['Student Name', 'Score', 'Score (Raw)', 'Feedback']],
     column_config={
         "Student Name": st.column_config.TextColumn("Student Name", width="medium"),
         "Score": st.column_config.ProgressColumn(
@@ -55,6 +56,7 @@ st.dataframe(
             min_value=0, 
             max_value=100
         ),
+        "Score (Raw)": st.column_config.TextColumn("Score (Raw)", width="small"),
         "Feedback": st.column_config.TextColumn("Detailed AI Feedback", width="large"),
     },
     use_container_width=True,

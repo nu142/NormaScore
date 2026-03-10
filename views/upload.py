@@ -32,7 +32,12 @@ if uploaded_files:
             st.error("Missing Hugging Face API Token. Please go back to Step 1 and provide the token.")
         else:
             with st.spinner("Analyzing student submissions against reference schema using AI... This may take a moment."):
-                df_results = evaluate_all(uploaded_files, st.session_state['reference_schema'], hf_token=st.session_state['hf_token'])
+                df_results = evaluate_all(
+                    uploaded_files, 
+                    st.session_state['reference_schema'], 
+                    hf_token=st.session_state['hf_token'],
+                    custom_rubric=st.session_state.get('custom_rubric')
+                )
                 
                 # Save state
                 st.session_state['evaluation_df'] = df_results
