@@ -2,7 +2,7 @@ import streamlit as st
 import time
 import json
 import pandas as pd
-from backend.model_call import extract_text, llm_extract_schema
+from backend.model_call import extract_text, llm_extract_schema, llm_generate_reference
 
 st.title("NormaScore: Upload Assignment Details")
 
@@ -91,10 +91,18 @@ if st.button("Save & Proceed to Submissions", type="primary", use_container_widt
                 st.error("Please provide a Hugging Face API Token in the sidebar to generate the schema.")
                 st.stop()
             if question_text:
-                ref_schema = llm_extract_schema(question_text, hf_token=st.session_state['hf_token'])
+                try:
+                    q_data = json.loads(question_text)
+                    ref_schema, _ = llm_generate_reference(q_data, hf_token=st.session_state['hf_token'])
+                except json.JSONDecodeError:
+                    ref_schema, _ = llm_extract_schema(question_text, hf_token=st.session_state['hf_token'])
             elif question_file:
                 text = extract_text(question_file, question_file.name)
-                ref_schema = llm_extract_schema(text, hf_token=st.session_state['hf_token'])
+                try:
+                    q_data = json.loads(text)
+                    ref_schema, _ = llm_generate_reference(q_data, hf_token=st.session_state['hf_token'])
+                except json.JSONDecodeError:
+                    ref_schema, _ = llm_extract_schema(text, hf_token=st.session_state['hf_token'])
         
         if ref_schema:
             st.session_state['reference_schema'] = ref_schema
