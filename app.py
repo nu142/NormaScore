@@ -70,9 +70,10 @@ def local_css():
 local_css()
 
 # Define Navigation
-question_page = st.Page("views/question_upload.py", title="Upload Question", icon="📄", url_path="/")
-upload_page = st.Page("views/upload.py", title="Upload Submissions", icon="📁", url_path="/submissions")
-evaluation_page = st.Page("views/evaluation.py", title="Evaluation View", icon="📊", url_path="/evaluation")
+question_page = st.Page("views/question_upload.py", title="Upload Question", icon="📄",url_path="",
+    default=True)
+upload_page = st.Page("views/upload.py", title="Upload Submissions", icon="📁", url_path="submissions")
+evaluation_page = st.Page("views/evaluation.py", title="Evaluation View", icon="📊", url_path="evaluation")
 
 # Initialize routing
 pg = st.navigation([question_page, upload_page, evaluation_page])

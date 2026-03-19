@@ -32,10 +32,14 @@ with col4:
 st.markdown("---")
 
 st.markdown("### 🤖 Generalized AI Feedback")
-st.info("""
-**Overall Class Performance Summary:**  
-Overview logic is omitted for length, but the individual student feedback contains precise AI grading deductions based on the normalized reference schema extracted from your rubric. 
-""")
+
+if 'class_summary' not in st.session_state:
+    from backend.model_call import generate_class_summary
+    hf_token = st.session_state.get('hf_token')
+    with st.spinner("Generating AI Analysis of Class Performance..."):
+        st.session_state['class_summary'] = generate_class_summary(df, hf_token)
+
+st.info(f"**Overall Class Performance Summary:**\n\n{st.session_state['class_summary']}")
 
 st.markdown("---")
 

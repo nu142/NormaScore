@@ -1,5 +1,5 @@
 import pandas as pd
-from backend.model_call import extract_text, llm_extract_schema
+from backend.model_call import extract_text, llm_extract_schema, generate_nlp_feedback
 import json
 
 def parse_fds(fd_list):
@@ -188,11 +188,14 @@ def evaluate_all(student_files, reference_schema, hf_token=None, custom_rubric=N
             if not feedback_str:
                 feedback_str = "Perfect execution. All criteria met beautifully."
                 
+            # Generate NLP feedback
+            nlp_feedback = generate_nlp_feedback(feedback_str, name, score, evaluator.max_score, hf_token)
+                
             percent_score = (score / evaluator.max_score) * 100 if evaluator.max_score > 0 else 0
             results.append({
                 "Student Name": name,
                 "Score": percent_score,
-                "Feedback": feedback_str,
+                "Feedback": nlp_feedback,
                 "RawScore": score,
                 "MaxScore": evaluator.max_score
             })
