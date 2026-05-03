@@ -1,0 +1,541 @@
+[{
+  "attribute": [
+    "staff_id",
+    "staff_name",
+    "staff_room_no",
+    "staff_phone",
+    "printer_id",
+    "printer_status",
+    "clerical_staff_id",
+    "clerk_name",
+    "delivery_person_id",
+    "delivery_person_phone",
+    "delivery_person_name",
+    "print_request_id",
+    "purpose",
+    "time",
+    "date",
+    "print_mode",
+    "color_print",
+    "paper_type",
+    "cost"
+  ],
+  "multivalued": [
+    "staff_phone",
+    "delivery_person_phone"
+  ],
+  "compositeattributes": [],
+  "fds": [
+    "staff_id -> staff_name",
+    "staff_id -> staff_room_no",
+    "staff_id -> staff_phone",
+    "printer_id -> printer_status",
+    "delivery_person_id -> delivery_person_name",
+    "delivery_person_id -> delivery_person_phone",
+    "print_request_id, staff_id, printer_id -> purpose",
+    "print_request_id, staff_id, printer_id -> time",
+    "print_request_id, staff_id, printer_id -> date",
+    "print_request_id, staff_id, printer_id -> print_mode",
+    "print_request_id, staff_id, printer_id -> color_print",
+    "print_request_id, staff_id, printer_id -> paper_type",
+    "print_request_id, staff_id, printer_id -> cost",
+    "printer_id -> cost"
+  ],
+  "1nf": [
+    "staff(staff_id, staff_name, staff_room_no)",
+    "staff_phone(staff_id, staff_phone)",
+    "printer(printer_id, printer_status)",
+    "clerical_staff(clerical_staff_id, clerk_name)",
+    "delivery_person(delivery_person_id, delivery_person_name)",
+    "delivery_phone(delivery_person_id, delivery_person_phone)",
+    "print_request(print_request_id, staff_id, printer_id, purpose, time, date, print_mode, color_print, paper_type, cost)"
+  ],
+  "2nf": [
+    "staff(staff_id, staff_name, staff_room_no)",
+    "staff_phone(staff_id, staff_phone)",
+    "printer(printer_id, printer_status)",
+    "clerical_staff(clerical_staff_id, clerk_name)",
+    "delivery_person(delivery_person_id, delivery_person_name)",
+    "delivery_phone(delivery_person_id, delivery_person_phone)",
+    "print_request(print_request_id, staff_id, printer_id, purpose, time, date, print_mode, color_print, paper_type, cost)"
+  ],
+  "3nf": [
+    "staff(staff_id, staff_name, staff_room_no)",
+    "staff_phone(staff_id, staff_phone)",
+    "printer(printer_id, printer_status)",
+    "clerical_staff(clerical_staff_id, clerk_name)",
+    "delivery_person(delivery_person_id, delivery_person_name)",
+    "delivery_phone(delivery_person_id, delivery_person_phone)",
+    "print_request(print_request_id, staff_id, printer_id, purpose, time, date, print_mode, color_print, paper_type)",
+    "printer_cost(printer_id, cost)"
+  ],
+  "final_tables": [
+    "staff(staff_id, staff_name, staff_room_no)",
+    "staff_phone(staff_id, staff_phone)",
+    "printer(printer_id, printer_status)",
+    "clerical_staff(clerical_staff_id, clerk_name)",
+    "delivery_person(delivery_person_id, delivery_person_name)",
+    "delivery_phone(delivery_person_id, delivery_person_phone)",
+    "print_request(print_request_id, staff_id, printer_id, purpose, time, date, print_mode, color_print, paper_type)",
+    "printer_cost(printer_id, cost)"
+  ]
+},
+
+{
+  "attribute": [
+    "client-id",
+    "client-name",
+    "client-address",
+    "client-contact",
+    "house-id",
+    "house-address",
+    "house-type",
+    "site-id",
+    "site-location",
+    "site-area",
+    "material-id",
+    "material-name",
+    "material-model",
+    "material-type",
+    "rec-lvl",
+    "qtyavail",
+    "company",
+    "retailer-id",
+    "retailer-name",
+    "retailer-address",
+    "retailer-landline",
+    "retailer-contact-no"
+  ],
+  "multivalued": [
+    "client-contact",
+    "retailer-contact-no"
+  ],
+  "compositeattributes": [],
+  "fds": [
+    "client-id -> client-name, client-address",
+    "client-id -> client-contact",
+    "house-id -> house-address, house-type, client-id",
+    "site-id -> site-location, site-area, house-id",
+    "material-id -> material-name, material-model, material-type, rec-lvl, qtyavail, company",
+    "retailer-id -> retailer-name, retailer-address, retailer-landline",
+    "retailer-id -> retailer-contact-no"
+  ],
+  "1nf": [
+    "client(client-id, name, address)",
+    "client_contact(client-id, contact-no)",
+    "house/office(house-id, address, type, client-id)",
+    "site(site-id, location, area, house-id)",
+    "material(material-id, name, model, type, rec-lvl, qtyavail, company)",
+    "retailer(retailer-id, name, address, landline-no)",
+    "retailer_contact(retailer-id, contact-no)"
+  ],
+  "2nf": [
+    "client(client-id, name, address)",
+    "client_contact(client-id, contact-no)",
+    "house/office(house-id, address, type, client-id)",
+    "site(site-id, location, area, house-id)",
+    "material(material-id, name, model, type, rec-lvl, qtyavail, company)",
+    "retailer(retailer-id, name, address, landline-no)",
+    "retailer_contact(retailer-id, contact-no)"
+  ],
+  "3nf": [
+    "client(client-id, name, address)",
+    "client_contact(client-id, contact-no)",
+    "house/office(house-id, address, type, client-id)",
+    "site(site-id, location, area, house-id)",
+    "material(material-id, name, model, type, rec-lvl, qtyavail, company)",
+    "uses(site-id, material-id)",
+    "retailer(retailer-id, name, address, landline-no)",
+    "retailer_contact(retailer-id, contact-no)",
+    "supplies(material-id, retailer-id)"
+  ],
+  "final_tables": [
+    "client(client-id, name, address)",
+    "client_contact(client-id, contact-no)",
+    "house/office(house-id, address, type, client-id)",
+    "site(site-id, location, area, house-id)",
+    "material(material-id, name, model, type, rec-lvl, qtyavail, company)",
+    "uses(site-id, material-id)",
+    "retailer(retailer-id, name, address, landline-no)",
+    "retailer_contact(retailer-id, contact-no)",
+    "supplies(material-id, retailer-id)"
+  ]
+},
+ {
+  "attribute": [
+    "programmer_id",
+    "date_of_joining",
+    "qualification",
+    "specialization",
+    "years_of_experience",
+    "programming_languages_known",
+    "software_id",
+    "date_of_commencement",
+    "date_of_release",
+    "status_of_software",
+    "development_duration",
+    "client_id",
+    "name",
+    "city",
+    "street",
+    "house_number",
+    "zip_code",
+    "phone_number",
+    "leader_id"
+  ],
+  "multivalued": [
+    "programming_languages_known"
+  ],
+  "compositeattributes": [],
+  "fds": [
+    "programmer_id -> date_of_joining",
+    "programmer_id -> qualification",
+    "programmer_id -> specialization",
+    "programmer_id -> years_of_experience",
+    "software_id -> date_of_commencement",
+    "software_id -> date_of_release",
+    "software_id -> status_of_software",
+    "software_id -> development_duration",
+    "client_id -> name",
+    "client_id -> city",
+    "client_id -> street",
+    "client_id -> house_number",
+    "client_id -> zip_code",
+    "client_id -> phone_number",
+    "leader_id -> leader_id"
+  ],
+  "1nf": [
+    {
+      "table": "programmer",
+      "attributes": ["programmer_id", "date_of_joining", "qualification", "specialization", "years_of_experience"]
+    },
+    {
+      "table": "programming_languages",
+      "attributes": ["programmer_id", "programming_languages_known"]
+    },
+    {
+      "table": "software",
+      "attributes": ["software_id", "date_of_commencement", "date_of_release", "status_of_software", "development_duration"]
+    },
+    {
+      "table": "client",
+      "attributes": ["client_id", "name", "city", "street", "house_number", "zip_code", "phone_number"]
+    },
+    {
+      "table": "project_leader",
+      "attributes": ["leader_id"]
+    },
+    {
+      "table": "develop",
+      "attributes": ["programmer_id", "software_id"]
+    },
+    {
+      "table": "commission",
+      "attributes": ["software_id", "client_id"]
+    },
+    {
+      "table": "leads",
+      "attributes": ["leader_id", "software_id"]
+    }
+  ],
+  "2nf": [
+    {
+      "table": "programmer",
+      "attributes": ["programmer_id", "date_of_joining", "qualification", "specialization", "years_of_experience"]
+    },
+    {
+      "table": "programming_languages",
+      "attributes": ["programmer_id", "programming_languages_known"]
+    },
+    {
+      "table": "software",
+      "attributes": ["software_id", "date_of_commencement", "date_of_release", "status_of_software", "development_duration"]
+    },
+    {
+      "table": "client",
+      "attributes": ["client_id", "name", "city", "street", "house_number", "zip_code", "phone_number"]
+    },
+    {
+      "table": "project_leader",
+      "attributes": ["leader_id"]
+    },
+    {
+      "table": "develop",
+      "attributes": ["programmer_id", "software_id"]
+    },
+    {
+      "table": "commission",
+      "attributes": ["software_id", "client_id"]
+    },
+    {
+      "table": "leads",
+      "attributes": ["leader_id", "software_id"]
+    }
+  ],
+  "3nf": [
+    {
+      "table": "programmer",
+      "attributes": ["programmer_id", "date_of_joining", "qualification", "specialization", "years_of_experience"]
+    },
+    {
+      "table": "programming_languages",
+      "attributes": ["programmer_id", "programming_languages_known"]
+    },
+    {
+      "table": "software",
+      "attributes": ["software_id", "date_of_commencement", "date_of_release", "status_of_software", "development_duration"]
+    },
+    {
+      "table": "client",
+      "attributes": ["client_id", "name", "city", "street", "house_number", "zip_code"]
+    },
+    {
+      "table": "contact_info",
+      "attributes": ["client_id", "phone_number"]
+    },
+    {
+      "table": "project_leader",
+      "attributes": ["leader_id"]
+    },
+    {
+      "table": "develop",
+      "attributes": ["programmer_id", "software_id"]
+    },
+    {
+      "table": "commission",
+      "attributes": ["software_id", "client_id"]
+    },
+    {
+      "table": "leads",
+      "attributes": ["leader_id", "software_id"]
+    }
+  ],
+  "final_tables": [
+    {
+      "table": "programmer",
+      "attributes": ["programmer_id", "date_of_joining", "qualification", "specialization", "years_of_experience"]
+    },
+    {
+      "table": "programming_languages",
+      "attributes": ["programmer_id", "programming_languages_known"]
+    },
+    {
+      "table": "software",
+      "attributes": ["software_id", "date_of_commencement", "date_of_release", "status_of_software", "development_duration"]
+    },
+    {
+      "table": "client",
+      "attributes": ["client_id", "name", "city", "street", "house_number", "zip_code"]
+    },
+    {
+      "table": "contact_info",
+      "attributes": ["client_id", "phone_number"]
+    },
+    {
+      "table": "project_leader",
+      "attributes": ["leader_id"]
+    },
+    {
+      "table": "develop",
+      "attributes": ["programmer_id", "software_id"]
+    },
+    {
+      "table": "commission",
+      "attributes": ["software_id", "client_id"]
+    },
+    {
+      "table": "leads",
+      "attributes": ["leader_id", "software_id"]
+    }
+  ]
+},
+{
+  "attribute": [
+    "student_id",
+    "stud_first_name",
+    "stud_last_name",
+    "dob",
+    "email",
+    "department",
+    "advisor_id",
+    "student_phone",
+    "faculty_id",
+    "fac_first_name",
+    "fac_last_name",
+    "fac_email",
+    "designation",
+    "faculty_department",
+    "faculty_phone",
+    "application_id",
+    "leave_type",
+    "start_date",
+    "end_date",
+    "purpose",
+    "status",
+    "submission_date",
+    "extended_request",
+    "proof_id",
+    "proof_type",
+    "file_path",
+    "upload_date"
+  ],
+  "multivalued": [
+    "student_phone"
+  ],
+  "compositeattributes": [
+    "stud_name",
+    "fac_name"
+  ],
+  "fds": [
+    "student_id -> stud_first_name",
+    "student_id -> stud_last_name",
+    "student_id -> dob",
+    "student_id -> email",
+    "student_id -> department",
+    "student_id, faculty_id -> advisor_id",
+    "faculty_id -> fac_first_name",
+    "faculty_id -> fac_last_name",
+    "faculty_id -> fac_email",
+    "faculty_id -> designation",
+    "faculty_id -> faculty_department",
+    "application_id -> leave_type",
+    "application_id -> start_date",
+    "application_id -> end_date",
+    "application_id -> status",
+    "application_id -> extended_request",
+    "application_id -> purpose",
+    "application_id -> submission_date",
+    "proof_id -> proof_type",
+    "proof_id -> file_path",
+    "proof_id -> upload_date",
+    "student_id -> student_phone"
+  ],
+  "1nf": [
+    "student_id",
+    "stud_first_name",
+    "stud_last_name",
+    "dob",
+    "email",
+    "department",
+    "advisor_id",
+    "faculty_id",
+    "fac_first_name",
+    "fac_last_name",
+    "fac_email",
+    "designation",
+    "faculty_department",
+    "application_id",
+    "leave_type",
+    "start_date",
+    "end_date",
+    "purpose",
+    "status",
+    "submission_date",
+    "extended_request",
+    "proof_id",
+    "proof_type",
+    "file_path",
+    "upload_date",
+    "student_phone"
+  ],
+  "2nf": [
+    "student(student_id, stud_first_name, stud_last_name, dob, email, department)",
+    "advisor(stud_id, faculty_id, advisor_id)",
+    "faculty(faculty_id, fac_first_name, fac_last_name, fac_email, designation, faculty_department)",
+    "application(application_id, leave_type, start_date, end_date, status, extended_request, purpose, submission_date)",
+    "proof(proof_id, proof_type, file_path, upload_date)",
+    "stud_ph(stud_id, student_phone)"
+  ],
+  "3nf": [
+    "student(student_id, stud_first_name, stud_last_name, dob, email, department)",
+    "advisor(stud_id, faculty_id, advisor_id)",
+    "faculty(faculty_id, fac_first_name, fac_last_name, fac_email, designation, faculty_department)",
+    "application(application_id, leave_type, start_date, end_date, status, extended_request, purpose, submission_date)",
+    "proof(proof_id, proof_type, file_path, upload_date)",
+    "stud_ph(stud_id, student_phone)"
+  ],
+  "final_tables": [
+    "student(student_id, stud_first_name, stud_last_name, dob, email, department)",
+    "advisor(stud_id, faculty_id, advisor_id)",
+    "faculty(faculty_id, fac_first_name, fac_last_name, fac_email, designation, faculty_department)",
+    "application(application_id, leave_type, start_date, end_date, status, extended_request, purpose, submission_date)",
+    "proof(proof_id, proof_type, file_path, upload_date)",
+    "stud_ph(stud_id, student_phone)"
+  ]
+},
+
+{
+  "attribute": [
+    "person_id",
+    "name",
+    "phone_no",
+    "department",
+    "approval_required",
+    "request_id",
+    "request_date",
+    "status",
+    "description",
+    "service_type_id",
+    "service_type_name",
+    "service_category",
+    "staff_id",
+    "staff_name",
+    "staff_phone",
+    "staff_specialization",
+    "hod_id",
+    "hod_name",
+    "approval_status"
+  ],
+  "multivalued": [],
+  "compositeattributes": [],
+  "fds": [
+    "person_id -> name, phone_no, department, approval_required",
+    "request_id -> request_date, status, description",
+    "service_type_id -> service_type_name, service_category",
+    "staff_id -> staff_name, staff_phone, staff_specialization",
+    "hod_id -> hod_name",
+    "request_id -> staff_id, hod_id, approval_status"
+  ],
+  "1nf": [
+    "person (person_id, name, phone_no, department, approval_required)",
+    "person_contact (person_id, contact_number)",
+    "service_request (request_id, person_id, service_type_id, request_date, status, description)",
+    "service_type (service_type_id, service_type_name, service_category)",
+    "staff (staff_id, staff_name, staff_phone, staff_specialization)",
+    "staff_contact (staff_id, contact_number)",
+    "hod (hod_id, hod_name, department_id)",
+    "request_handling (request_id, staff_id, hod_id, approval_status)"
+  ],
+  "2nf": [
+    "person (person_id, name, phone_no, department, approval_required)",
+    "person_contact (person_id, contact_number)",
+    "service_request (request_id, person_id, service_type_id, request_date, status, description)",
+    "service_type (service_type_id, service_type_name, service_category)",
+    "staff (staff_id, staff_name, staff_phone, staff_specialization)",
+    "staff_contact (staff_id, contact_number)",
+    "hod (hod_id, hod_name, department_id)",
+    "request_handling (request_id, staff_id, hod_id, approval_status)"
+  ],
+  "3nf": [
+    "person (person_id, name, department_id, approval_required)",
+    "person_contact (person_id, contact_number)",
+    "department (department_id, department_name)",
+    "service_request (request_id, person_id, service_type_id, request_date, status, description)",
+    "service_type (service_type_id, service_type_name, service_category)",
+    "staff (staff_id, staff_name, staff_department_id, staff_specialization)",
+    "staff_contact (staff_id, contact_number)",
+    "hod (hod_id, hod_name, department_id)",
+    "request_handling (request_id, staff_id, hod_id, approval_status)"
+  ],
+  "final_tables": [
+    "person (person_id, name, department_id, approval_required)",
+    "person_contact (person_id, contact_number)",
+    "department (department_id, department_name)",
+    "service_request (request_id, person_id, service_type_id, request_date, status, description)",
+    "service_type (service_type_id, service_type_name, service_category)",
+    "staff (staff_id, staff_name, staff_department_id, staff_specialization)",
+    "staff_contact (staff_id, contact_number)",
+    "hod (hod_id, hod_name, department_id)",
+    "request_handling (request_id, staff_id, hod_id, approval_status)"
+  ]
+}]

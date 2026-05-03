@@ -1,0 +1,67 @@
+
+
+
+{
+  "fds": [
+    "student_id->name,email",
+    "project_id->project_title"
+  ],
+  "1nf": [
+    {
+      "table_name": "unnormalized",
+      "attributes": ["student_id", "name", "email", "project_id", "project_title"],
+      "pk": ["student_id", "project_id"]
+    }
+  ],
+  "2nf": [
+    {
+      "table_name": "students",
+      "attributes": ["student_id", "name", "email"],
+      "pk": ["student_id"]
+    },
+    {
+      "table_name": "projects",
+      "attributes": ["project_id", "project_title"],
+      "pk": ["project_id"]
+    },
+    {
+      "table_name": "student_projects",
+      "attributes": ["student_id", "project_id"],
+      "pk": ["student_id", "project_id"]
+    }
+  ],
+  "3nf": [
+    {
+      "table_name": "students",
+      "attributes": ["student_id", "name", "email"],
+      "pk": ["student_id"]
+    },
+    {
+      "table_name": "projects",
+      "attributes": ["project_id", "project_title"],
+      "pk": ["project_id"]
+    },
+    {
+      "table_name": "student_projects",
+      "attributes": ["student_id", "project_id"],
+      "pk": ["student_id", "project_id"]
+    }
+  ],
+  "final_tables": [
+    {
+      "table_name": "students",
+      "attributes": ["student_id", "name", "email"],
+      "pk": ["student_id"]
+    },
+    {
+      "table_name": "projects",
+      "attributes": ["project_id", "project_title"],
+      "pk": ["project_id"]
+    },
+    {
+      "table_name": "student_projects",
+      "attributes": ["student_id", "project_id"],
+      "pk": ["student_id", "project_id"]
+    }
+  ]
+}

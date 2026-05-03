@@ -2,6 +2,17 @@ import pandas as pd
 from backend.model_call import extract_text, llm_extract_schema, generate_nlp_feedback
 import json
 
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+hf_token = os.getenv("HF_TOKEN")
+
+print(gemini_api_key)
+print(hf_token)
+
 def parse_fds(fd_list):
     parsed = []
     for fd in fd_list:

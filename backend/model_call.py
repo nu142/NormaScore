@@ -17,7 +17,7 @@ STRICT RULES:
 - Follow the JSON format EXACTLY
 
 REQUIRED JSON FORMAT:
-{
+{{
   "attribute": [],
   "multivalued": [],
   "compositeattributes": [],
@@ -26,7 +26,7 @@ REQUIRED JSON FORMAT:
   "2nf": [],
   "3nf": [],
   "final_tables": []
-}
+}}
 
 Database Schema Description:
 <<<{text}>>>
