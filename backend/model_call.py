@@ -1,114 +1,181 @@
 import os
 import re
 import json
+import inspect
 import pdfplumber
 import streamlit as st
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import PeftModel, LoraConfig
+from huggingface_hub import snapshot_download
 
 # ─────────────────────────────────────────────────────────────────────────────
-# LOAD MODEL (same as Kaggle)
+# CONSTANTS
 # ─────────────────────────────────────────────────────────────────────────────
 
-MODEL_NAME = "asky777/rl-normalizer-qwen-7b"
+MODEL_NAME     = "asky777/qwen-normabench-grpo-pass2-step76"  # LoRA adapter
+BASE_MODEL     = "Qwen/Qwen2.5-7B-Instruct"
+TOKENIZER_NAME = "Qwen/Qwen2.5-7B-Instruct"
+
+# Exact system prompt from Kaggle notebook
+SYSTEM_PROMPT = """You are a database normalization expert. Given a relation with attributes, multivalued attributes, and functional dependencies, normalize it step by step through 1NF, 2NF, and 3NF.
+
+Return ONLY a JSON object with this exact structure:
+{
+  "attribute": [...],
+  "multivalued": [...],
+  "fd_set": [...],
+  "1nf": {"tables": [{"name": "...", "attributes": [...], "primary_key": [...]}]},
+  "anomalies_1nf": {"insertion": bool, "update": bool, "deletion": bool},
+  "2nf": {"tables": [{"name": "...", "attributes": [...], "primary_key": [...]}]},
+  "anomalies_2nf": {"insertion": bool, "update": bool, "deletion": bool},
+  "3nf": {"tables": [{"name": "...", "attributes": [...], "primary_key": [...]}]},
+  "anomalies_3nf": {"insertion": bool, "update": bool, "deletion": bool},
+  "final": {"tables": [{"name": "...", "attributes": [...], "primary_key": [...]}]}
+}
+
+### 1NF: ONLY separate multivalued. DO NOT remove partial/transitive deps. They MUST still exist.
+### 2NF: ONLY remove partial deps. DO NOT remove transitive. They MUST still exist.
+### 3NF: ONLY remove transitive deps.
+Rules:
+- "bool" means the value must be either true or false.
+- Determine the anomaly values based on the schema produced at each stage.
+- Do NOT hardcode anomaly values.
+- Analyze the tables at each normalization stage and decide whether insertion, update, or deletion anomalies exist.
+
+"""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MODEL LOADER
+# ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_resource
-def load_model():
+def load_model(hf_token: str = None):
+    token = hf_token or os.environ.get("HF_TOKEN")
+
+    # Download adapter locally so we can patch its config
+    adapter_path = snapshot_download(MODEL_NAME, token=token)
+
+    # Strip unknown LoraConfig keys (adapter was saved with newer PEFT)
+    config_path = os.path.join(adapter_path, "adapter_config.json")
+    with open(config_path) as f:
+        adapter_cfg = json.load(f)
+    valid_keys = set(inspect.signature(LoraConfig.__init__).parameters.keys()) - {"self"}
+    for key in set(adapter_cfg.keys()) - valid_keys:
+        adapter_cfg.pop(key)
+    with open(config_path, "w") as f:
+        json.dump(adapter_cfg, f)
+
     tokenizer = AutoTokenizer.from_pretrained(
-        MODEL_NAME,
-        trust_remote_code=True
+        TOKENIZER_NAME,
+        token=token,
+        trust_remote_code=True,
+        use_fast=True,
+        padding_side="left",
+    )
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    # 4-bit quantization — fits a 7B model on a single 16GB GPU
+    # Kaggle used 2x T4 (31GB total) with float16; we use 4-bit to match on 1 GPU
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.float16,
+        bnb_4bit_quant_type="nf4",
     )
 
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME,
-        torch_dtype=torch.float16,
+    base_model = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL,
+        token=token,
+        quantization_config=bnb_config,
         device_map="auto",
-        trust_remote_code=True
+        trust_remote_code=True,
     )
 
+    model = PeftModel.from_pretrained(
+        base_model,
+        adapter_path,
+        token=token,
+        low_cpu_mem_usage=False,  # avoids lm_head KeyError with device_map="auto"
+    )
+    model.eval()
     return tokenizer, model
 
 
-tokenizer, model = load_model()
-
 # ─────────────────────────────────────────────────────────────────────────────
-# PROMPTS
+# FD NORMALIZER
 # ─────────────────────────────────────────────────────────────────────────────
 
-REFERENCE_PROMPT_SYSTEM = """You are a database normalization expert.
-You must show the COMPLETE normalization process: 1NF → 2NF → 3NF.
-Each stage must show tables, even if they don't change from the previous stage.
-Output ONLY valid JSON — no markdown fences, no explanation."""
+def normalize_fds(fds_raw: list) -> list:
+    """
+    Accepts fds in ANY of these formats and always returns list-of-(lhs_list, rhs_list):
+      - [["guest_id"], ["guest_name", "guest_email"]]   <- JSON list-of-lists
+      - "guest_id->guest_name,guest_email"              <- string arrow format
+      - {"lhs": ["guest_id"], "rhs": ["guest_name"]}    <- dict format
+    """
+    normalized = []
+    for fd in fds_raw:
+        if isinstance(fd, str):
+            if "->" not in fd:
+                continue
+            lhs_str, rhs_str = fd.split("->", 1)
+            lhs = [a.strip() for a in lhs_str.split(",") if a.strip()]
+            rhs = [a.strip() for a in rhs_str.split(",") if a.strip()]
+            normalized.append((lhs, rhs))
 
-REFERENCE_PROMPT_USER = """Normalize this schema step-by-step, showing 1NF, 2NF, and 3NF stages.
+        elif isinstance(fd, dict):
+            lhs = fd.get("lhs", [])
+            rhs = fd.get("rhs", [])
+            if isinstance(lhs, str): lhs = [lhs]
+            if isinstance(rhs, str): rhs = [rhs]
+            normalized.append((lhs, rhs))
 
-REQUIRED JSON FORMAT:
-{{
-  "attribute": ["all", "attributes", "here"],
-  "multivalued": [],
-  "compositeattributes": [],
-  "fds": ["attr1->attr2", "attr2->attr3"],
-  "1nf": [
-    {{"name": "TableName", "attributes": ["attr1","attr2","attr3"], "pk": ["attr1"]}}
-  ],
-  "anomalies_1nf": {{"insertion": false, "update": false, "deletion": false}},
-  "2nf": [
-    {{"name": "Table1", "attributes": ["attr1","attr2"], "pk": ["attr1"]}},
-    {{"name": "Table2", "attributes": ["attr2","attr3"], "pk": ["attr2"]}}
-  ],
-  "anomalies_2nf": {{"insertion": false, "update": false, "deletion": false}},
-  "3nf": [
-    {{"name": "Table1", "attributes": ["attr1","attr2"], "pk": ["attr1"]}},
-    {{"name": "Table2", "attributes": ["attr2","attr3"], "pk": ["attr2"]}}
-  ],
-  "anomalies_3nf": {{"insertion": false, "update": false, "deletion": false}},
-  "final_tables": [
-    {{"name": "Table1", "attributes": ["attr1","attr2"], "pk": ["attr1"]}},
-    {{"name": "Table2", "attributes": ["attr2","attr3"], "pk": ["attr2"]}}
-  ]
-}}
+        elif isinstance(fd, (list, tuple)) and len(fd) == 2:
+            lhs, rhs = fd[0], fd[1]
+            if isinstance(lhs, str): lhs = [lhs]
+            if isinstance(rhs, str): rhs = [rhs]
+            normalized.append((lhs, rhs))
 
-Input Schema:
-Relation: {relation_name}
-Attributes: {attrs_str}
-Multivalued Attributes: {mv_str}
-Functional Dependencies:
-{fds_str}
+    return normalized
 
-Output JSON:"""
 
-STUDENT_EXTRACT_PROMPT = """You are extracting database normalization answers from student text.
+# ─────────────────────────────────────────────────────────────────────────────
+# PROMPT BUILDER — exact Kaggle format
+# ─────────────────────────────────────────────────────────────────────────────
 
-STRICT RULES:
-- Output ONLY valid JSON — no markdown, no explanation
-- Do NOT invent attributes, tables, or dependencies
-- If information is missing, use empty lists []
-- Attribute names must be lowercase
-- Use '->' for functional dependencies
+def build_prompt(schema: dict, tokenizer) -> str:
+    fds_normalized = normalize_fds(schema.get('fds', []))
+    fd_lines = "\n".join(
+        f"{', '.join(lhs)} -> {', '.join(rhs)}"
+        for lhs, rhs in fds_normalized
+    )
 
-REQUIRED JSON FORMAT:
-{{
-  "attribute": [],
-  "multivalued": [],
-  "compositeattributes": [],
-  "fds": [],
-  "1nf": [],
-  "2nf": [],
-  "3nf": [],
-  "final_tables": []
-}}
+    # Exact user prompt format used in Kaggle training loop
+    user_prompt = (
+        f"Relation attributes: {schema['attributes']}\n"
+        f"Multivalued attributes: {schema.get('multivalued', [])}\n"
+        f"Functional Dependencies:\n{fd_lines}\n\n"
+        f"Return the normalization in JSON format."
+    )
 
-Student Answer:
-<<<{text}>>>
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user",   "content": user_prompt},
+    ]
 
-Output JSON:"""
+    return tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+    )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # JSON EXTRACTION
 # ─────────────────────────────────────────────────────────────────────────────
 
 def extract_json_robust(text: str):
-
+    # Try fenced code blocks first
     for pattern in [r'```json\s*(.*?)\s*```', r'```\s*(.*?)\s*```']:
         match = re.search(pattern, text, re.DOTALL)
         if match:
@@ -117,14 +184,12 @@ def extract_json_robust(text: str):
             except json.JSONDecodeError:
                 pass
 
+    # Fall back to brace-matching
     start = text.find('{')
     if start < 0:
         return None
 
-    depth = 0
-    in_string = False
-    escape = False
-
+    depth, in_string, escape = 0, False, False
     for i, c in enumerate(text[start:], start=start):
         if escape:
             escape = False
@@ -145,25 +210,77 @@ def extract_json_robust(text: str):
                         return json.loads(text[start:i + 1])
                     except json.JSONDecodeError:
                         break
-
     return None
 
+
 # ─────────────────────────────────────────────────────────────────────────────
-# PREPROCESSING
+# OUTPUT NORMALIZER
+# Adapts model output keys to what the Streamlit app expects
+# Model returns: "1nf": {"tables": [...]} and "primary_key"
+# App expects:   "1nf": [...] and "pk"
 # ─────────────────────────────────────────────────────────────────────────────
 
-def preprocess(text: str):
+def normalize_model_output(parsed: dict) -> dict:
+    if parsed is None:
+        return None
+
+    # Flatten "1nf": {"tables": [...]} -> "1nf": [...]
+    for stage in ["1nf", "2nf", "3nf"]:
+        if stage in parsed and isinstance(parsed[stage], dict):
+            parsed[stage] = parsed[stage].get("tables", [])
+
+    # Map "final" -> "final_tables"
+    if "final" in parsed and "final_tables" not in parsed:
+        final = parsed.pop("final")
+        parsed["final_tables"] = final.get("tables", []) if isinstance(final, dict) else final
+
+    # Map "primary_key" -> "pk" in every table
+    for stage in ["1nf", "2nf", "3nf", "final_tables"]:
+        for table in parsed.get(stage, []):
+            if "primary_key" in table and "pk" not in table:
+                table["pk"] = table.pop("primary_key")
+
+    return parsed
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GENERATION — exact Kaggle params
+# ─────────────────────────────────────────────────────────────────────────────
+
+def generate_from_model(prompt: str, hf_token: str = None, max_new_tokens: int = 2048):
+    tokenizer, model = load_model(hf_token)
+
+    inputs = tokenizer(prompt, return_tensors="pt")
+    # Use model.device — works correctly with 4-bit + device_map="auto"
+    inputs = {k: v.to(model.device) for k, v in inputs.items()}
+    input_len = inputs["input_ids"].shape[1]
+
+    print(f"Input tokens: {input_len}, generating...")
+
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            temperature=0.0,
+            do_sample=False,
+        )
+
+    print("Generation done.")
+    return tokenizer.decode(outputs[0][input_len:], skip_special_tokens=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HELPERS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def preprocess(text: str) -> str:
     text = text.lower()
-    text = text.replace("→", "->").replace("=>", "->").replace(":", "->")
+    text = text.replace("→", "->").replace("=>", "->")
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# TEXT EXTRACTION
-# ─────────────────────────────────────────────────────────────────────────────
 
-def extract_text(file_like, filename):
-
+def extract_text(file_like, filename: str) -> str:
     text = ""
     if filename.lower().endswith('.pdf'):
         with pdfplumber.open(file_like) as pdf:
@@ -173,70 +290,66 @@ def extract_text(file_like, filename):
                     text += extracted + "\n"
     else:
         text = file_like.getvalue().decode("utf-8")
-
     return text.strip()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# MODEL GENERATION
-# ─────────────────────────────────────────────────────────────────────────────
-
-def generate_from_model(prompt, max_new_tokens=2048):
-
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-
-    with torch.inference_mode():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            temperature=0.0
-        )
-
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# REFERENCE SCHEMA
+# PUBLIC API
 # ─────────────────────────────────────────────────────────────────────────────
 
 def llm_generate_reference(schema: dict, hf_token=None, max_new_tokens: int = 2048):
+    tokenizer, _ = load_model(hf_token)
+    prompt = build_prompt(schema, tokenizer)
 
-    attrs_str = ', '.join(schema['attributes'])
-    mv_str = json.dumps(schema.get('multivalued', []))
+    print("=== PROMPT (last 400 chars) ===")
+    print(prompt[-400:])
+    print("=== END PROMPT ===")
 
-    fds_display = []
-    for lhs, rhs in schema.get('fds', []):
-        lhs_str = ','.join(lhs)
-        rhs_str = ','.join(rhs)
-        fds_display.append(f"{lhs_str} -> {rhs_str}")
+    raw_response = generate_from_model(prompt, hf_token=hf_token, max_new_tokens=max_new_tokens)
 
-    fds_str = "\n".join(fds_display)
-
-    user_content = REFERENCE_PROMPT_USER.format(
-        relation_name=schema.get('relation_name', 'RELATION'),
-        attrs_str=attrs_str,
-        mv_str=mv_str,
-        fds_str=fds_str
-    )
-
-    prompt = f"{REFERENCE_PROMPT_SYSTEM}\n\n{user_content}"
-
-    raw_response = generate_from_model(prompt, max_new_tokens)
+    print("=== RAW RESPONSE ===")
+    print(raw_response)
+    print("=== END RAW RESPONSE ===")
 
     parsed = extract_json_robust(raw_response)
+    parsed = normalize_model_output(parsed)
+
+    print("=== PARSED ===")
+    print(parsed)
+    print("=== END PARSED ===")
 
     return parsed, raw_response
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STUDENT EXTRACTION
-# ─────────────────────────────────────────────────────────────────────────────
 
-def llm_extract_schema(text, hf_token=None, max_new_tokens=2048):
-
+def llm_extract_schema(text: str, hf_token=None, max_new_tokens: int = 2048):
+    tokenizer, _ = load_model(hf_token)
     clean_text = preprocess(text)
 
-    prompt = STUDENT_EXTRACT_PROMPT.format(text=clean_text)
+    system = "You are extracting database normalization answers from student text. Output ONLY valid JSON — no markdown, no explanation."
+    user = f"""REQUIRED JSON FORMAT:
+{{
+  "attribute": [], "multivalued": [], "compositeattributes": [],
+  "fds": [], "1nf": [], "2nf": [], "3nf": [], "final_tables": []
+}}
 
-    raw_response = generate_from_model(prompt, max_new_tokens)
+Student Answer:
+<<<{clean_text}>>>
+
+Output JSON:"""
+
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user",   "content": user},
+    ]
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+
+    print("=== EXTRACT SCHEMA PROMPT (last 300 chars) ===")
+    print(prompt[-300:])
+
+    raw_response = generate_from_model(prompt, hf_token=hf_token, max_new_tokens=max_new_tokens)
+
+    print("=== EXTRACT SCHEMA RAW RESPONSE ===")
+    print(raw_response)
 
     parsed = extract_json_robust(raw_response)
-
     return parsed, raw_response

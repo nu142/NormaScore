@@ -1,10 +1,14 @@
-streamlit>=1.36.0
-pandas
-pdfplumber
-huggingface_hub
+# Pin to the SAME versions used in the Kaggle notebook that produced correct output.
+# The notebook explicitly downgrades to these — newer transformers (5.x) changes
+# how Qwen's chat template is applied, producing a different prompt format
+# than the model was fine-tuned on.
 
-torch
-transformers>=4.41.0
-accelerate
-sentencepiece
-safetensors
+transformers==4.38.2
+accelerate==0.27.2
+tokenizers==0.15.2
+
+# Everything else
+torch>=2.1.0
+streamlit>=1.30.0
+pdfplumber>=0.10.0
+pandas>=2.0.0
