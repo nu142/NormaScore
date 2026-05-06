@@ -21,7 +21,19 @@ def local_css():
     }
     /* Headers */
     h1, h2, h3 {
-        color: #0f172a;
+        color: #0f172a !important;
+        font-family: 'Inter', sans-serif;
+    }
+    p {
+        color: #0f172a !important;
+        font-family: 'Inter', sans-serif;
+    }
+    span {
+        color: #0f172a !important;
+        font-family: 'Inter', sans-serif;
+    }
+    div {
+        color: #0f172a !important;
         font-family: 'Inter', sans-serif;
     }
     h1 {

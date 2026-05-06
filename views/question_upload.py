@@ -6,11 +6,12 @@ from backend.model_call import extract_text, llm_extract_schema
 
 st.title("NormaScore: Upload Assignment Details")
 
-with st.sidebar:
-    st.markdown("### ⚙️ API Configuration")
-    hf_token = st.text_input("Hugging Face API Token", type="password", help="Required to run the AI evaluator.")
-    if hf_token:
-        st.session_state['hf_token'] = hf_token
+import os
+from dotenv import load_dotenv
+load_dotenv(dotenv_path="env/.env")
+
+if 'hf_token' not in st.session_state:
+    st.session_state['hf_token'] = os.getenv("HF_TOKEN")
 
 st.markdown("### 1) Upload Question")
 q_input_method = st.radio("Question Input Format", ["Paste JSON", "Upload Document"], horizontal=True, label_visibility="collapsed")
@@ -21,7 +22,7 @@ question_file = None
 if q_input_method == "Paste JSON":
     question_text = st.text_area("Paste Question/Schema JSON", height=200, help="E.g. {\"relation_name\": ... }")
 else:
-    question_file = st.file_uploader("Upload Question Document", type=['txt', 'md', 'pdf', 'docx'])
+    question_file = st.file_uploader("Upload Question Document", type=['txt', 'md', 'pdf', 'docx','json'])
 
 # Default multiplier values
 fd_score_per_item = 1.0

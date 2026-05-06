@@ -1,11 +1,12 @@
 import pandas as pd
+from dotenv import load_dotenv
 from backend.model_call import extract_text, llm_extract_schema, generate_nlp_feedback
 import json
 
-from dotenv import load_dotenv
+
 import os
 
-load_dotenv()
+load_dotenv(dotenv_path="env/.env")
 
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 hf_token = os.getenv("HF_TOKEN")
@@ -13,7 +14,7 @@ hf_token = os.getenv("HF_TOKEN")
 print(gemini_api_key)
 print(hf_token)
 
-def parse_fds(fd_list):
+def parse_fds(fd_list): # fds -> parse to lhs and rhs
     parsed = []
     for fd in fd_list:
         if "->" not in fd: continue
@@ -24,7 +25,7 @@ def parse_fds(fd_list):
         })
     return parsed
 
-def build_rubric_sheet(ref_schema):
+def build_rubric_sheet(ref_schema):#build rubric sheet
     rubric = {
         "Functional Dependencies": {"max": 1.0, "rule": " marks per FD"},
         "1NF (Composite)": {"max": 1.0, "rule": "Handling of composite attributes"},
@@ -90,6 +91,8 @@ class NormalizationEvaluator:
 
         # 2. 1NF
         s1nf = student_sub.get('1nf', [])
+        print(type(s1nf), s1nf)
+        print(type(s1nf[0]) if s1nf else None)
         score_1nf = 0
         feedback_1nf = []
         ref_1nf_attrs = set(self.ref['1nf'][0]['attributes']) if self.ref.get('1nf') and len(self.ref['1nf']) > 0 else set()

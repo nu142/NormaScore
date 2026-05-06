@@ -2,3 +2,4 @@ streamlit>=1.36.0
 pandas
 pdfplumber
 huggingface_hub
+python-dotenv>=1.0.0

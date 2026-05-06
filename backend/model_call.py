@@ -1,8 +1,16 @@
 import os
 import re
 import json
+from dotenv import load_dotenv
 import pdfplumber
 from huggingface_hub import InferenceClient
+load_dotenv(dotenv_path="env/.env")
+
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+hf_token = os.getenv("HF_TOKEN")
+
+print(gemini_api_key)
+print(hf_token)
 
 LLM_PROMPT = """
 You are extracting database normalization answers.
@@ -18,21 +26,45 @@ STRICT RULES:
 
 REQUIRED JSON FORMAT:
 {{
-  "attribute": [],
-  "multivalued": [],
-  "compositeattributes": [],
-  "fds": [],
-  "1nf": [],
-  "2nf": [],
-  "3nf": [],
-  "final_tables": []
+  "attribute": ["string"],
+  "multivalued": ["string"],
+  "compositeattributes": ["string"],
+  "fds": ["string"],
+  "1nf": [
+    {{
+      "name": "table_name",
+      "attributes": ["attr1", "attr2"],
+      "pk": ["attr1"]
+    }}
+  ],
+  "2nf": [
+    {{
+      "name": "table_name",
+      "attributes": ["attr1", "attr2"],
+      "pk": ["attr1"]
+    }}
+  ],
+  "3nf": [
+    {{
+      "name": "table_name",
+      "attributes": ["attr1", "attr2"],
+      "pk": ["attr1"]
+    }}
+  ],
+  "final_tables": [
+    {{
+      "name": "table_name",
+      "attributes": ["attr1", "attr2"],
+      "pk": ["attr1"]
+    }}
+  ]
 }}
 
 Database Schema Description:
 <<<{text}>>>
 """
 
-def extract_text(file_like, filename: str):
+def extract_text(file_like, filename: str): # reads the uploded file
     """
     Extract text. We receive a Streamlit UploadedFile object.
     """
@@ -44,24 +76,27 @@ def extract_text(file_like, filename: str):
                 if extracted: text += extracted + "\\n"
     else:
         text = file_like.getvalue().decode("utf-8")
+    print("eeexxxtracted text ++++++++++++:",text)
     return text.strip()
 
-def preprocess(text: str) -> str:
+def preprocess(text: str) -> str: # cleans the text from extract_text
     text = text.lower()
     text = text.replace("→", "->").replace("=>", "->").replace(":", "->")
     text = re.sub(r"\\s+", " ", text)
     fillers = ["the table is", "we have", "let us consider", "primary key is", "pk is"]
     for f in fillers:
         text = text.replace(f, "")
+        print("******",text)
     return text.strip()
 
-def extract_json_from_response(text):
+def extract_json_from_response(text): # return json txt
     match = re.search(r"\\{.*\\}", text, re.DOTALL)
     if not match:
         raise ValueError(f"No JSON found in response")
+    print("+++++++",match.group(0))
     return match.group(0)
 
-def llm_extract_schema(text, hf_token=None, is_student=False):
+def llm_extract_schema(text, hf_token=None, is_student=False): #
     if not hf_token:
         raise ValueError("Hugging Face API token is required.")
         
@@ -83,13 +118,14 @@ def llm_extract_schema(text, hf_token=None, is_student=False):
     
     raw_response = response.choices[0].message.content
     try:
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>",json.loads(extract_json_from_response(raw_response)))
         return json.loads(extract_json_from_response(raw_response))
     except Exception as e:
-        print(f"Extraction Error: {e}")
+        print(f"wwwwwwwwExtraction Error: {e}")
         print(f"Raw Output: {raw_response}")
         return None
 
-def generate_nlp_feedback(raw_feedback, student_name, score, max_score, hf_token=None):
+def generate_nlp_feedback(raw_feedback, student_name, score, max_score, hf_token=None): #summary for student
     if not hf_token:
         return raw_feedback
         
@@ -114,6 +150,7 @@ Do not invent any new errors, and do not invent praise not supported by the raw 
             max_tokens=500,
             temperature=0.3
         )
+        #print(score,max_score)
         return response.choices[0].message.content.strip()
     except Exception as e:
         print(f"Feedback Generation Error: {e}")
