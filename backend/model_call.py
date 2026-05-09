@@ -9,8 +9,8 @@ load_dotenv(dotenv_path="env/.env")
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 hf_token = os.getenv("HF_TOKEN")
 
-print(gemini_api_key)
-print(hf_token)
+# print(gemini_api_key)
+# print(hf_token)
 
 LLM_PROMPT = """
 You are extracting database normalization answers.
@@ -76,7 +76,7 @@ def extract_text(file_like, filename: str): # reads the uploded file
                 if extracted: text += extracted + "\\n"
     else:
         text = file_like.getvalue().decode("utf-8")
-    print("eeexxxtracted text ++++++++++++:",text)
+    #print("eeexxxtracted text ++++++++++++:",text)
     return text.strip()
 
 def preprocess(text: str) -> str: # cleans the text from extract_text
@@ -86,14 +86,14 @@ def preprocess(text: str) -> str: # cleans the text from extract_text
     fillers = ["the table is", "we have", "let us consider", "primary key is", "pk is"]
     for f in fillers:
         text = text.replace(f, "")
-        print("******",text)
+       # print("******",text)
     return text.strip()
 
 def extract_json_from_response(text): # return json txt
-    match = re.search(r"\\{.*\\}", text, re.DOTALL)
+    match = re.search(r"\{.*\}", text, re.DOTALL)
     if not match:
         raise ValueError(f"No JSON found in response")
-    print("+++++++",match.group(0))
+   # print("+++++++",match.group(0))
     return match.group(0)
 
 def llm_extract_schema(text, hf_token=None, is_student=False): #

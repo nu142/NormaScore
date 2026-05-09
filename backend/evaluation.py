@@ -11,8 +11,8 @@ load_dotenv(dotenv_path="env/.env")
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 hf_token = os.getenv("HF_TOKEN")
 
-print(gemini_api_key)
-print(hf_token)
+# print(gemini_api_key)
+# print(hf_token)
 
 def parse_fds(fd_list): # fds -> parse to lhs and rhs
     parsed = []
@@ -91,8 +91,8 @@ class NormalizationEvaluator:
 
         # 2. 1NF
         s1nf = student_sub.get('1nf', [])
-        print(type(s1nf), s1nf)
-        print(type(s1nf[0]) if s1nf else None)
+        # print(type(s1nf), s1nf)
+        # print(type(s1nf[0]) if s1nf else None)
         score_1nf = 0
         feedback_1nf = []
         ref_1nf_attrs = set(self.ref['1nf'][0]['attributes']) if self.ref.get('1nf') and len(self.ref['1nf']) > 0 else set()
