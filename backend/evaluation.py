@@ -27,14 +27,14 @@ def parse_fds(fd_list): # fds -> parse to lhs and rhs
 
 def build_rubric_sheet(ref_schema):#build rubric sheet
     rubric = {
-        "Functional Dependencies": {"max": 1.0, "rule": " marks per FD"},
+        "Functional Dependencies": {"max": 0.5, "rule": " marks per FD"},
         "1NF (Composite)": {"max": 1.0, "rule": "Handling of composite attributes"},
         "1NF (Multivalued)": {"max": 1.0, "rule": "Handling of multivalued attributes"},
         "2NF (Partial)": {"max": 1.0, "rule": "Identify and remove partial dependencies"},
-        "2NF (Lossless)": {"max": 2.0, "rule": "Ensure lossless decomposition"},
+        "2NF (Lossless)": {"max": 0.5, "rule": "Ensure lossless decomposition"},
         "2NF (Key)": {"max": 1.0, "rule": "Correct primary keys assigned"},
         "3NF (Transitive)": {"max": 1.0, "rule": "Identify and remove transitive dependencies"},
-        "3NF (Lossless)": {"max": 2.0, "rule": "Ensure lossless decomposition"},
+        "3NF (Lossless)": {"max": 0.5, "rule": "Ensure lossless decomposition"},
         "3NF (Key)": {"max": 1.0, "rule": "Correct primary keys assigned"},
         "Final Relations": {"max": 1.0, "rule": " marks per Relation"}
     }

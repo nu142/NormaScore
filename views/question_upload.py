@@ -5,12 +5,12 @@ import os
 import pandas as pd
 from dotenv import load_dotenv
 from backend.model_call import extract_text, llm_extract_schema
-from backend.ref_schema_builder import llm_generate_reference
+from backend.ref_schema_builder import extract_text, llm_extract_schema, llm_generate_reference
 # ── Page title ────────────────────────────────────────────────────────────────
 st.title("NormaScore: Upload Assignment Details")
 
 # ── Token: auto-load from .env, no sidebar UI (Code 2) ───────────────────────
-load_dotenv(dotenv_path="env/.env")
+load_dotenv()
 if 'hf_token' not in st.session_state:
     st.session_state['hf_token'] = os.getenv("HF_TOKEN")
 
@@ -24,7 +24,7 @@ q_input_method = st.radio(
 )
 
 question_text = ""
-question_file = None
+question_files = []
 
 if q_input_method == "Paste JSON":
     question_text = st.text_area(
@@ -35,7 +35,8 @@ if q_input_method == "Paste JSON":
 else:
     question_file = st.file_uploader(
         "Upload Question Document",
-        type=['txt', 'md', 'pdf', 'docx', 'json']   # Code 2: json included
+        type=['txt', 'md', 'pdf', 'docx', 'json'],
+        accept_multiple_files=True  # Code 2: json included
     )
 
 # ── Section 2: Rubrics (unchanged in both) ────────────────────────────────────
@@ -51,10 +52,10 @@ if 'rubric_df' not in st.session_state:
         "1NF (Composite)":         {"Score": 1.0,                  "Scoring Rule": "Handling of composite attributes"},
         "1NF (Multivalued)":       {"Score": 1.0,                  "Scoring Rule": "Handling of multivalued attributes"},
         "2NF (Partial)":           {"Score": 1.0,                  "Scoring Rule": "Identify and remove partial dependencies"},
-        "2NF (Lossless)":          {"Score": 2.0,                  "Scoring Rule": "Ensure lossless decomposition"},
+        "2NF (Lossless)":          {"Score": 0.5,                  "Scoring Rule": "Ensure lossless decomposition"},
         "2NF (Key)":               {"Score": 1.0,                  "Scoring Rule": "Correct primary keys assigned"},
         "3NF (Transitive)":        {"Score": 1.0,                  "Scoring Rule": "Identify and remove transitive dependencies"},
-        "3NF (Lossless)":          {"Score": 2.0,                  "Scoring Rule": "Ensure lossless decomposition"},
+        "3NF (Lossless)":          {"Score": 0.5,                  "Scoring Rule": "Ensure lossless decomposition"},
         "3NF (Key)":               {"Score": 1.0,                  "Scoring Rule": "Correct primary keys assigned"},
         "Final Relations":         {"Score": final_score_per_item, "Scoring Rule": " marks per Relation"},
     }
@@ -115,28 +116,41 @@ if st.button("🔍 Generate & Preview Reference Schema", use_container_width=Tru
                 )
 
         # ── Path C: uploaded question document ───────────────────────────────
-        elif question_file:
+        elif question_files:
             if not st.session_state.get('hf_token'):
                 st.error("No Hugging Face token found. Add HF_TOKEN to env/.env.")
                 st.stop()
-            text = extract_text(question_file, question_file.name)
-            try:
-                q_data = json.loads(text)
-                # Code 2 shortcut: already a full schema
-                if all(k in q_data for k in ['1nf', '2nf', '3nf', 'final_tables']):
-                    preview_schema = q_data
-                    preview_raw    = json.dumps(preview_schema, indent=2)
-                else:
-                    # Code 1: structured JSON question → llm_generate_reference
-                    preview_schema, preview_raw = llm_generate_reference(
-                        q_data, hf_token=st.session_state['hf_token']
-                    )
-            except json.JSONDecodeError:
-                preview_schema = llm_extract_schema(
-                    text, hf_token=st.session_state['hf_token']
-                )
-                preview_raw = json.dumps(preview_schema, indent=2) if preview_schema else "Failed to extract schema."
+            all_schemas = []
 
+            for question_file in question_files:
+                text = extract_text(question_file, question_file.name)
+
+                try:
+                    q_data = json.loads(text)
+
+                    # Already full schema
+                    if all(k in q_data for k in ['1nf', '2nf', '3nf', 'final_tables']):
+                        preview_schema = q_data
+
+                    else:
+                        preview_schema, preview_raw = llm_generate_reference(
+                            q_data,
+                            hf_token=st.session_state['hf_token']
+                        )
+
+                except json.JSONDecodeError:
+                    preview_schema = llm_extract_schema(
+                        text,
+                        hf_token=st.session_state['hf_token']
+                    )
+
+                all_schemas.append({
+                    "filename": question_file.name,
+                    "schema": preview_schema
+                })
+
+            preview_schema = all_schemas
+            preview_raw = json.dumps(all_schemas, indent=2)
         else:
             st.error("Please provide a question or upload a reference schema first.")
             st.stop()

@@ -9,6 +9,11 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel, LoraConfig
 from huggingface_hub import snapshot_download
 
+from dotenv import load_dotenv
+from pathlib import Path
+
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 # ─────────────────────────────────────────────────────────────────────────────
 # CONSTANTS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -66,6 +71,7 @@ def load_model(hf_token: str = None):
     with open(config_path, "w") as f:
         json.dump(adapter_cfg, f)
 
+
     tokenizer = AutoTokenizer.from_pretrained(
         TOKENIZER_NAME,
         token=token,
@@ -73,34 +79,55 @@ def load_model(hf_token: str = None):
         use_fast=True,
         padding_side="left",
     )
+
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    # 4-bit quantization — fits a 7B model on a single 16GB GPU
-    # Kaggle used 2x T4 (31GB total) with float16; we use 4-bit to match on 1 GPU
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_quant_type="nf4",
-    )
+
+    # # 4-bit quantization config
+    # bnb_config = BitsAndBytesConfig(
+    #     load_in_4bit=True,
+    #     bnb_4bit_compute_dtype=torch.float16,
+    #     bnb_4bit_quant_type="nf4",
+    # )
+
+
+    # # Load quantized base model
+    # base_model = AutoModelForCausalLM.from_pretrained(
+    #     BASE_MODEL,
+    #     token=token,
+    #     quantization_config=bnb_config,
+    #     device_map="auto",
+    #     trust_remote_code=True,
+    # )
+
+
+    # # Attach LoRA adapter
+    # model = PeftModel.from_pretrained(
+    #     base_model,
+    #     adapter_path,
+    #     token=token,
+    #     low_cpu_mem_usage=False,
+    # )
 
     base_model = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL,
-        token=token,
-        quantization_config=bnb_config,
-        device_map="auto",
-        trust_remote_code=True,
-    )
+    BASE_MODEL,
+    token=token,
+    device_map=None,
+    torch_dtype=torch.float16,
+    trust_remote_code=True,
+)
 
     model = PeftModel.from_pretrained(
         base_model,
         adapter_path,
         token=token,
-        low_cpu_mem_usage=False,  # avoids lm_head KeyError with device_map="auto"
+        low_cpu_mem_usage=False,
     )
-    model.eval()
-    return tokenizer, model
 
+    model.eval()
+
+    return tokenizer, model
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FD NORMALIZER
@@ -273,24 +300,24 @@ def generate_from_model(prompt: str, hf_token: str = None, max_new_tokens: int =
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
 
-# def preprocess(text: str) -> str:
+def preprocess(text: str) -> str:
     text = text.lower()
     text = text.replace("→", "->").replace("=>", "->")
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
 
-# def extract_text(file_like, filename: str) -> str:
-#     text = ""
-#     if filename.lower().endswith('.pdf'):
-#         with pdfplumber.open(file_like) as pdf:
-#             for page in pdf.pages:
-#                 extracted = page.extract_text()
-#                 if extracted:
-#                     text += extracted + "\n"
-#     else:
-#         text = file_like.getvalue().decode("utf-8")
-#     return text.strip()
+def extract_text(file_like, filename: str) -> str:
+    text = ""
+    if filename.lower().endswith('.pdf'):
+        with pdfplumber.open(file_like) as pdf:
+            for page in pdf.pages:
+                extracted = page.extract_text()
+                if extracted:
+                    text += extracted + "\n"
+    else:
+        text = file_like.getvalue().decode("utf-8")
+    return text.strip()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -321,7 +348,7 @@ def llm_generate_reference(schema: dict, hf_token=None, max_new_tokens: int = 20
     return parsed, raw_response
 
 
-# def llm_extract_schema(text: str, hf_token=None, max_new_tokens: int = 2048):
+def llm_extract_schema(text: str, hf_token=None, max_new_tokens: int = 2048):
     tokenizer, _ = load_model(hf_token)
     clean_text = preprocess(text)
 
